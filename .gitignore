@@ -3,3 +3,4 @@
 *.obj
 stc8a_test_tb_demo/hex/*
 stc8a_test_tb_demo/project/*
+*.smile
