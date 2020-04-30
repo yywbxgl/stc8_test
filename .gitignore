@@ -4,3 +4,5 @@
 stc8a_test_tb_demo/hex/*
 stc8a_test_tb_demo/project/*
 */*.uvgui*
+/stc8a_test/*.smile
+/gps_demo_v1/gps_demo.uvgui.smile
