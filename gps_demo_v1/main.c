@@ -1,9 +1,6 @@
 #include "STC8G.H"
 #include <intrins.h>
 
-#define PD          0x02
-#define IDL         0x01
-
 
 // 外设定义
 //sbit LED = P2^6;
@@ -28,8 +25,8 @@ void clear_buffer(void)
 		buffer[i] = 0;
 	}
 	wptr = 0;
-	
 }
+
 
 // 串口1中断
 void UartIsr() interrupt 4
@@ -93,7 +90,7 @@ void TM0_Isr() interrupt 1
 		t0_n ++;
 		if (t0_n == 1000)  // 间隔1秒喂一次看门狗 
 		{
-			LED = !LED;   
+			//LED = !LED;   
 			t0_n = 0;
 			WDT_CONTR |= 0x10;  //清看门狗,否则系统复位
 		} 
@@ -126,31 +123,87 @@ void Delay()		//@11.0592MHz
 	} while (--i);
 }
 
+//发送前100Byte 数据
+void send_buffer_100(void)
+{
+	int i = 0;
+	int temp_h = 0;
+	int temp_l = 0;
+	UartSendStr("AT+QIOTSEND=0x0001,100,\""); 
+	for (;i<100;++i)
+	{
+		//UartSend(buffer[i]);
+	    temp_h = '0' + buffer[i]/16;
+			temp_l = '0' + buffer[i]%16;
+			if (temp_h > '9') 
+				temp_h = temp_h + 7;
+			if (temp_l > '9')
+				temp_l = temp_l +7;
+			UartSend(temp_h);
+			UartSend(temp_l);
+	}
+  UartSendStr("\"\r\n"); 
+	
+	clear_buffer();
+}
+
+//发送当前所有数据
+void send_buffer(void)
+{
+	int i =0;
+	
+	UartSendStr("AT+QIOTSEND=0x0001\r\n");  // 上报数据方式2  不指定数据长度
+	Delay();   // 延迟
+
+	while(buffer[i] != 0)
+	{
+		UartSend(buffer[i]);
+		++i;
+	}
+	UartSend(0x1A); // crtl+z = 0x1A 结束符 发送发送数据
+	UartSendStr("\r\n");
+	
+	clear_buffer();
+}
+
 void app()
 {
 		int begin = 0;
 		int end = 0;
 		int i =0;
+		int n=0;
 	
 	  int temp_h =0 ;
 	  int temp_l= 0;
 	
 	  //LED = 0 ;      // 设备供电
 
-		Delay();  // 延时2秒
+		Delay();  // 拉低2秒
 		Delay();
 
-	  
+//		Delay();  // 开机后等待4秒
+//		Delay();
+//		Delay();  
+//		Delay();
+	
+	  UartSendStr("ATE0\r\n"); 
+		Delay();
+		send_buffer_100();
+	
+		UartSendStr("ATI\r\n"); 
+		Delay();
+		send_buffer();
+
 	  UartSendStr("AT+QGNSSC=1\r\n");  //开启GNSS
 		Delay();
+	  Delay();
 	  UartSendStr("AT+QIFGCNT=0\r\n");  
 		Delay();
 	  UartSendStr("AT+QICSGP=1,\"CMNET\"\r\n"); 
-	  Delay();	
+	  Delay();
+		Delay();	
 		UartSendStr("AT+QGNSSTS?\r\n"); 
 	  Delay();
-	
-	
 	  UartSendStr("AT+QIREGAPP\r\n"); 
 	  Delay();
 	  UartSendStr("AT+QIACT\r\n"); 
@@ -169,25 +222,33 @@ void app()
 	
 	  UartSendStr("AT+QLBSCFG=\"token\",d73Xq0J9JZ8p4615\r\n"); 
 	  Delay();
-	  UartSendStr("AT+QLBS\r\n");    //第一次获取时间比较长 
+		clear_buffer();  // 清空缓存
+	  UartSendStr("AT+QLBS\r\n"); //获取Qlocal信息
 	  Delay();
 		Delay();
 		Delay();
 		Delay();
-		
-	 
+		//send_buffer_100(); //发送buffer数据
+		send_buffer();
+
 	  UartSendStr("AT+QIOTREG=1\r\n"); 
 	  Delay();
 		Delay();
+			
+	  // 上报数据方式1
+//	  UartSendStr("AT+QIOTSEND=0x0001,3,\"323232\"\r\n"); 
+//	  Delay();
+//		Delay();
 		
-		// 清空缓存
-		clear_buffer();
-		UartSendStr("AT+QGNSSRD\r\n"); 
+		
+		clear_buffer();   // 清空缓存
+		UartSendStr("AT+QGNSSRD?\r\n"); 
 	  Delay();
 		Delay();
 	
 		
-		//获取第一句地理信息上报
+		//获取第一行地理信息上报
+		i=0;
 		for (;i<BUFF_LEN; ++i)
 		{
 			if (buffer[i] == '$')
@@ -205,44 +266,31 @@ void app()
 				 break;
 			}	
 		}
-
 		
-		// 上报数据方式1
-	  UartSendStr("AT+QIOTSEND=0x0001,3,\"323232\"\r\n"); 
-	  Delay();
-		Delay();
 		
 		// 上报数据方式2
 		UartSendStr("AT+QIOTSEND=0x0001\r\n"); 
 	  Delay();
-		//UartSendStr("\"32323233\"\r\n"); 
-		//Delay();
-		UartSend('\"');
 	  i = begin;
 		for (; i<end; ++i)
 		{
-			//UartSend(buffer[i]);
-			temp_h = '0' + buffer[i]/16;
-			temp_l = '0' + buffer[i]%16;
-			if (temp_h > '9') 
-				temp_h = temp_h + 7;
-			if (temp_l > '9')
-				temp_l = temp_l +7;
-			UartSend(temp_h);
-			UartSend(temp_l);
+			  UartSend(buffer[i]);
 		}
-		UartSendStr("\"\r\n");
+		UartSend(0x1A); // crtl+z = 0x1A 结束符 发送发送数据
+		UartSendStr("\r\n");
 		
-		Delay();		
-	
+		Delay();
+		Delay();
+		Delay();
+		
 		//LED = 1 ;  // 设备断电
-		
+	
 }
 
 char up_cont = 0 ; // 记录当前唤醒的次数
 void test7(void)
 {
-  //P_SW1 = 0x40;  //切换串口1到引脚 p3.6_p3.7   //stc8g-8pin的芯片切换到引脚 p3.1_p3.2
+  P_SW1 = 0x40;  //切换串口1到引脚 p3.6_p3.7   //stc8g-8pin的芯片切换到引脚 p3.1_p3.2
 	UartInit();
 	Timer0Init();
 	
@@ -269,10 +317,9 @@ void test7(void)
 	{
 		//UartSendStr("wake up !\r\n");
 	  
-		up_cont ++;        //唤醒次数加1
-		if (up_cont == 30)  //唤醒达到一定的唤醒次数，运行业务
+		up_cont ++;
+		if (up_cont == 30)  //唤醒次数累计到半小时，运行业务
 		{
-			// todo 流程 1. 共MC25供电  2. 初始化MC25 + 获取GNSS + 上报地理 3. 关机MC25
 			app();
 			up_cont = 0;
 		}
