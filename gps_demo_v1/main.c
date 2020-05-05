@@ -4,8 +4,8 @@
 
 // 外设定义
 //sbit LED = P2^6;
-sbit pwkey = P3^0;
-sbit power = P3^1;
+//sbit pwkey = P3^0;   // mc25 pwdkey键盘
+//sbit power = P3^1;   // mc25供电
 
 
 // 串口1控制
@@ -40,10 +40,10 @@ void UartIsr() interrupt 4
     {
         RI = 0;  //接收中断标志清零
         buffer[wptr++] = SBUF; //将接收到的数据放入BUFF缓存中，buff缓存当前指针加1,一次接收一个1个字节
-			  if (wptr > BUFF_LEN - 2)
-				{
-					wptr = 0; //如果指针超过buffer大小，覆盖前面数据, 最后一位必须为0.用于循环发送结束
-				}
+		if (wptr > BUFF_LEN - 2)
+		{
+			wptr = 0; //如果指针超过buffer大小，覆盖前面数据, 最后一位必须为0.用于循环发送结束
+		}
 			  //wptr &= 0x03FE;  
     }
 }
@@ -87,13 +87,13 @@ void UartSendStr(char *p)
 unsigned int t0_n = 0;
 void TM0_Isr() interrupt 1
 {
-		t0_n ++;
-		if (t0_n == 1000)  // 间隔1秒喂一次看门狗 
-		{
-			//LED = !LED;   
-			t0_n = 0;
-			WDT_CONTR |= 0x10;  //清看门狗,否则系统复位
-		} 
+	t0_n ++;
+	if (t0_n == 1000)  // 间隔1秒喂一次看门狗 
+	{
+		//LED = !LED;   
+		t0_n = 0;
+		WDT_CONTR |= 0x10;  //清看门狗,否则系统复位
+	} 
 }
 
 //定时器0初始化
@@ -142,7 +142,7 @@ void send_buffer_100(void)
 			UartSend(temp_h);
 			UartSend(temp_l);
 	}
-  UartSendStr("\"\r\n"); 
+	UartSendStr("\"\r\n"); 
 	
 	clear_buffer();
 }
@@ -168,129 +168,141 @@ void send_buffer(void)
 
 void app()
 {
-		int begin = 0;
-		int end = 0;
-		int i =0;
-		int n=0;
+	int begin = 0;
+	int end = 0;
+	int i =0;
+	int n=0;
 	
-	  int temp_h =0 ;
-	  int temp_l= 0;
+	int temp_h =0 ;
+	int temp_l= 0;
 	
-	  //LED = 0 ;      // 设备供电
-
-		Delay();  // 拉低2秒
-		Delay();
-
-//		Delay();  // 开机后等待4秒
+//		LED = 0 ;      // 设备供电
+//		power = 1;
+//	    pwkey = 0;
 //		Delay();
+//		pwkey = 1;  // pwkey拉低2秒
 //		Delay();  
 //		Delay();
+//		pwkey = 0;   // 开机后等待4秒
+	Delay();  
+	Delay();
+	Delay();  		
+	Delay();
 	
-	  UartSendStr("ATE0\r\n"); 
-		Delay();
-		send_buffer_100();
+	UartSendStr("ATE0\r\n"); 
+	Delay();
 	
-		UartSendStr("ATI\r\n"); 
-		Delay();
-		send_buffer();
+	UartSendStr("AT+QGNSSC=1\r\n");  //开启GNSS
+	Delay();
+	Delay();
+	UartSendStr("AT+QIFGCNT=0\r\n");  
+	Delay();
+	UartSendStr("AT+QICSGP=1,\"CMNET\"\r\n"); 
+	Delay();
+	Delay();	
+	UartSendStr("AT+QGNSSTS?\r\n"); 
+	Delay();
+	UartSendStr("AT+QIREGAPP\r\n"); 
+	Delay();
+	UartSendStr("AT+QIACT\r\n"); 
+	Delay();
+	UartSendStr("AT+QGAGPS\r\n");  //等待apgs数据下载完毕
+	Delay();
+	Delay();
+	Delay();
+	Delay();
+	UartSendStr("AT+QGAGPSAID\r\n");  //注入agps数据
+	Delay();
+	Delay();
+	Delay();
+	UartSendStr("AT+QGNSSRD?\r\n"); 
+	Delay();
 
-	  UartSendStr("AT+QGNSSC=1\r\n");  //开启GNSS
-		Delay();
-	  Delay();
-	  UartSendStr("AT+QIFGCNT=0\r\n");  
-		Delay();
-	  UartSendStr("AT+QICSGP=1,\"CMNET\"\r\n"); 
-	  Delay();
-		Delay();	
-		UartSendStr("AT+QGNSSTS?\r\n"); 
-	  Delay();
-	  UartSendStr("AT+QIREGAPP\r\n"); 
-	  Delay();
-	  UartSendStr("AT+QIACT\r\n"); 
-	  Delay();
-		UartSendStr("AT+QGAGPS\r\n");  //等待apgs数据下载完毕
-	  Delay();
-		Delay();
-		Delay();
-		UartSendStr("AT+QGAGPSAID\r\n");  //注入agps数据
-	  Delay();
-		Delay();
-		Delay();
-		UartSendStr("AT+QGNSSRD\r\n"); 
-	  Delay();
 
+	UartSendStr("AT+QIOTREG=1\r\n");  //注册设备到云平台
+	Delay();
+	Delay();
+	Delay();
+	UartSendStr("ATI\r\n"); 
+	Delay();
+	send_buffer();
 	
-	  UartSendStr("AT+QLBSCFG=\"token\",d73Xq0J9JZ8p4615\r\n"); 
-	  Delay();
-		clear_buffer();  // 清空缓存
-	  UartSendStr("AT+QLBS\r\n"); //获取Qlocal信息
-	  Delay();
-		Delay();
-		Delay();
-		Delay();
-		//send_buffer_100(); //发送buffer数据
-		send_buffer();
-
-	  UartSendStr("AT+QIOTREG=1\r\n"); 
-	  Delay();
-		Delay();
 			
-	  // 上报数据方式1
-//	  UartSendStr("AT+QIOTSEND=0x0001,3,\"323232\"\r\n"); 
-//	  Delay();
-//		Delay();
+	//    上报数据方式1
+	//	  UartSendStr("AT+QIOTSEND=0x0001,3,\"323232\"\r\n"); 
+	//	  Delay();
+	//    Delay();
 		
 		
-		clear_buffer();   // 清空缓存
-		UartSendStr("AT+QGNSSRD?\r\n"); 
-	  Delay();
-		Delay();
+	clear_buffer();   // 清空缓存
+	UartSendStr("AT+QGNSSRD?\r\n");  //获取GPS信息
+	Delay();
+	Delay();
 	
 		
-		//获取第一行地理信息上报
-		i=0;
-		for (;i<BUFF_LEN; ++i)
+	//获取第一行地理信息上报
+	i=0;
+	for (;i<BUFF_LEN; ++i)
+	{
+		if (buffer[i] == '$')
 		{
-			if (buffer[i] == '$')
-			{
-			   begin = i;
-				 break;
-			}
+		   begin = i;
+			 break;
 		}
+	}
 		
-		for (;i < BUFF_LEN; ++i)
+	for (;i < BUFF_LEN; ++i)
+	{
+		if (buffer[i] == '\r')
 		{
-			if (buffer[i] == '\r')
-			{
-			   end = i;
-				 break;
-			}	
-		}
+		   end = i;
+			 break;
+		}	
+	}
 		
 		
-		// 上报数据方式2
-		UartSendStr("AT+QIOTSEND=0x0001\r\n"); 
-	  Delay();
-	  i = begin;
-		for (; i<end; ++i)
-		{
-			  UartSend(buffer[i]);
-		}
-		UartSend(0x1A); // crtl+z = 0x1A 结束符 发送发送数据
-		UartSendStr("\r\n");
+	// 上报GPS数据
+	UartSendStr("AT+QIOTSEND=0x0001\r\n"); 
+	Delay();
+	i = begin;
+	for (; i<end; ++i)
+	{
+		  UartSend(buffer[i]);
+	}
+	UartSend(0x1A); // crtl+z = 0x1A 结束符 发送发送数据
+	UartSendStr("\r\n");
 		
-		Delay();
-		Delay();
-		Delay();
+	Delay();
+	Delay();
+	Delay();
 		
-		//LED = 1 ;  // 设备断电
-	
+		
+	UartSendStr("AT+QLBSCFG=\"token\",d73Xq0J9JZ8p4615\r\n"); 
+	Delay();
+	clear_buffer();  // 清空缓存  获取Qlocal信息
+	UartSendStr("AT+QLBS\r\n"); 
+	Delay();
+	Delay();
+	Delay();
+	Delay();
+	send_buffer_100();
+	//send_buffer();
+		
+	//LED = 1 ;  // 设备断电
+	Delay();
+	Delay();	
 }
 
 char up_cont = 0 ; // 记录当前唤醒的次数
 void test7(void)
 {
-  P_SW1 = 0x40;  //切换串口1到引脚 p3.6_p3.7   //stc8g-8pin的芯片切换到引脚 p3.1_p3.2
+	// IO初始化  配置为双向输入  stc8g默认为高阻态
+
+	P3M0 = 0x00;
+	P3M1 = 0x00;
+
+	
+	P_SW1 = 0x40;  //切换串口1到引脚 p3.6_p3.7   //stc8g-8pin的芯片切换到引脚 p3.1_p3.2
 	UartInit();
 	Timer0Init();
 	
@@ -307,8 +319,8 @@ void test7(void)
 	//UartSendStr("system inint success!\r\n");
 	
 	//WDT_CONTR = 0x23;                           //使能看门狗,溢出时间约为0.5s
-  //WDT_CONTR = 0x24;                           //使能看门狗,溢出时间约为1s
-  WDT_CONTR = 0x27;                             //使能看门狗,溢出时间约为8s、
+    //WDT_CONTR = 0x24;                           //使能看门狗,溢出时间约为1s
+	WDT_CONTR = 0x27;                             //使能看门狗,溢出时间约为8s、
 	
 	
 	app();
