@@ -184,11 +184,13 @@ void app()
 //		Delay();  
 //		Delay();
 //		pwkey = 0;   // 开机后等待4秒
-	Delay();  
 	Delay();
-	Delay();  		
+	Delay();
+	Delay();
 	Delay();
 	
+	clear_buffer();
+
 	UartSendStr("ATE0\r\n"); 
 	Delay();
 	
@@ -200,13 +202,13 @@ void app()
 	UartSendStr("AT+QICSGP=1,\"CMNET\"\r\n"); 
 	Delay();
 	Delay();	
-	UartSendStr("AT+QGNSSTS?\r\n"); 
+	UartSendStr("AT+QGNSSTS?\r\n");  //同步时间
 	Delay();
-	UartSendStr("AT+QIREGAPP\r\n"); 
+	UartSendStr("AT+QIREGAPP\r\n");  //未知命令
 	Delay();
-	UartSendStr("AT+QIACT\r\n"); 
+	UartSendStr("AT+QIACT\r\n");  // 未知命令
 	Delay();
-	UartSendStr("AT+QGAGPS\r\n");  //等待apgs数据下载完毕
+	UartSendStr("AT+QGAGPS\r\n");    //等待apgs数据下载完毕
 	Delay();
 	Delay();
 	Delay();
@@ -215,8 +217,8 @@ void app()
 	Delay();
 	Delay();
 	Delay();
-	UartSendStr("AT+QGNSSRD?\r\n"); 
-	Delay();
+	//UartSendStr("AT+QGNSSRD?\r\n"); 
+	//Delay();
 
 
 	UartSendStr("AT+QIOTREG=1\r\n");  //注册设备到云平台
@@ -225,7 +227,8 @@ void app()
 	Delay();
 	UartSendStr("ATI\r\n"); 
 	Delay();
-	send_buffer();
+	// send_buffer();
+	send_buffer_100();
 	
 			
 	//    上报数据方式1
@@ -285,8 +288,8 @@ void app()
 	Delay();
 	Delay();
 	Delay();
-	send_buffer_100();
-	//send_buffer();
+	//send_buffer_100();
+	send_buffer();
 		
 	//LED = 1 ;  // 设备断电
 	Delay();
